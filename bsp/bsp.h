@@ -27,6 +27,8 @@ void led_toggle(uint8_t led);
  */
 uint8_t sw_getState();
 
+void led_setBright(uint8_t led, uint8_t value);
+
 /**
  * @brief Inicializacion de los servicios de BSP
  */

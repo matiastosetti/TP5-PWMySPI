@@ -14,9 +14,26 @@ void ledPulso(uint8_t led, uint32_t tiempo);
  */
 int main(void) {
 	bsp_init();
+	int brillo = 0;
+	int flag = 0;
 
 	while (1) {
+		bsp_contMS(100);
 
+		led_setBright(0,brillo);
+		led_setBright(1,brillo);
+		led_setBright(2,brillo);
+		led_setBright(3,brillo);
+
+		if(brillo >= 100)
+			flag = 0;
+		if(brillo <=0)
+			flag = 1;
+
+		if(flag)
+			brillo++;
+		else
+			brillo--;
 	}
 }
 
