@@ -187,7 +187,12 @@ void bsp_pwm_config(void) {
 	TIM_TimeBaseInitTypeDef TIM_config;
 	GPIO_InitTypeDef GPIO_config;
 	TIM_OCInitTypeDef TIM_OC_config;
-	uint16_t PrescalerValue;
+
+	/* Habilito el clock */
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+
+	/* Configuro leds como Segunda Funcion */
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 
 	GPIO_config.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_config.GPIO_Pin = GPIO_Pin_15 | GPIO_Pin_14 | GPIO_Pin_13 | GPIO_Pin_12;
@@ -197,10 +202,10 @@ void bsp_pwm_config(void) {
 
 	GPIO_Init(GPIOD, &GPIO_config);
 
-	GPIO_PinAFConfig(GPIOD, GPIO_Pin_15, GPIO_AF_TIM4);
-	GPIO_PinAFConfig(GPIOD, GPIO_Pin_14, GPIO_AF_TIM4);
-	GPIO_PinAFConfig(GPIOD, GPIO_Pin_13, GPIO_AF_TIM4);
-	GPIO_PinAFConfig(GPIOD, GPIO_Pin_12, GPIO_AF_TIM4);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource15, GPIO_AF_TIM4);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource14, GPIO_AF_TIM4);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource13, GPIO_AF_TIM4);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource12, GPIO_AF_TIM4);
 
 	TIM_config.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_config.TIM_ClockDivision = 0;

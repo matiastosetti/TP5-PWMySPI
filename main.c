@@ -18,7 +18,7 @@ int main(void) {
 	int flag = 0;
 
 	while (1) {
-		bsp_contMS(100);
+		bsp_delayMs(100);
 
 		led_setBright(0,brillo);
 		led_setBright(1,brillo);
