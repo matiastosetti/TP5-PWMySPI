@@ -42,18 +42,18 @@ int main(void) {
 		acc_y = bsp_get_acc('y');
 
 		if (acc_x > 0) {
-			led_setBright(0, acc_x * 1000);
-			led_setBright(2, 0);
-		} else {
-			led_setBright(0, 0);
-			led_setBright(2, acc_x * -100);
-		}
-		if (acc_y > 0) {
-			led_setBright(1, acc_y * 100);
+			led_setBright(1, acc_x * 100); //acc_x es un valor entre cero y uno. Como el duty cicle debe ser ingresado como % se lo multiplica por 100
 			led_setBright(3, 0);
 		} else {
 			led_setBright(1, 0);
-			led_setBright(3, acc_y * -100);
+			led_setBright(3, acc_x * -100);
+		}
+		if (acc_y > 0) {
+			led_setBright(0, acc_y * 100);
+			led_setBright(2, 0);
+		} else {
+			led_setBright(0, 0);
+			led_setBright(2, acc_y * -100);
 		}
 		acc_z = bsp_get_acc('z');
 	}
