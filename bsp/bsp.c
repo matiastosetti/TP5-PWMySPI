@@ -7,6 +7,7 @@
 #include "stm32f4xx_syscfg.h"	// configuraciones Generales
 #include "misc.h"				// Vectores de interrupciones (NVIC)
 #include "bsp.h"
+#include "LIS3DSH.h"
 
 #define LED_V GPIO_Pin_12
 #define LED_N GPIO_Pin_13
@@ -93,9 +94,30 @@ void bsp_timer_config();
 void bsp_init() {
 	//bsp_led_init();
 	bsp_pwm_config();
-
 	bsp_sw_init();
 	bsp_timer_config();
+	LIS3DSH_Init();
+	LIS3DSH_Set_Output(0X47);
+}
+
+
+float bsp_get_acc(char eje){
+
+	switch(eje){//sólo se lepuede pasar una variable entera, char, etc pero no punteros ni strings 'x'=caracter
+	case 'x'://se agregan dos casos para una única acción. En este caso por si x e smayúscula o minúscula.
+	case 'X':
+		return LIS3DSH_Get_X_Out(LIS3DSH_Sense_2g);
+		break; //no haría falta agregar break ya que el return hace salir del switch. pero por costumbre luego de una acción hay que poner un break.
+	case 'y':
+		return LIS3DSH_Get_Y_Out(LIS3DSH_Sense_2g);
+		break;
+	case 'Z':
+			return LIS3DSH_Get_Z_Out(LIS3DSH_Sense_2g);
+			break;
+
+	default:
+		return -999,9; //se pasa un número que indica error ya que es un imposible este nivel de aceleración
+	}
 }
 
 /**

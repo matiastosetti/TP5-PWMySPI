@@ -39,4 +39,6 @@ void bsp_init();
  */
 void bsp_delayMs(uint16_t x);
 
+float bsp_get_acc(char eje);
+
 #endif

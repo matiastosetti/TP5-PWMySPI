@@ -16,6 +16,9 @@ int main(void) {
 	bsp_init();
 	int brillo = 0;
 	int flag = 0;
+	float acc_x;
+	float acc_y;
+	float acc_z;
 
 	while (1) {
 		bsp_delayMs(100);
@@ -34,6 +37,10 @@ int main(void) {
 			brillo++;
 		else
 			brillo--;
+
+		acc_x=bsp_get_acc('x');
+		acc_y=bsp_get_acc('y');
+		acc_z=bsp_get_acc('z');
 	}
 }
 
