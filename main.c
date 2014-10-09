@@ -14,15 +14,21 @@ void ledPulso(uint8_t led, uint32_t tiempo);
  */
 int main(void) {
 	bsp_init();
-	int brillo = 0;
-	int flag = 0;
-	float acc_x;
-	float acc_y;
-	float acc_z;
-
+//	int brillo = 0;
+//	int flag = 0;
+//	float acc_x;
+//	float acc_y;
+//	float acc_z;
+	uint8_t CantLedsOn = 0; //Paso 7 empiezo con aplicaciòn.
+	float PorcentajePote=0;
 	while (1) {
-		bsp_delayMs(100);
+		//bsp_delayMs(100);
 
+		PorcentajePote = bsp_getPote();
+		CantLedsOn = 0.08 * PorcentajePote; //Se guarda un entero que indica la cant de leds a encenderse en base a una ecuaciòn de la recta. Ver apuntes luego de ADC
+		bumetroSet(CantLedsOn);
+
+//Uso del pwm para que con el paso del tiempo los leds brillen mas o menos
 //		led_setBright(0,brillo);
 //		led_setBright(1,brillo);
 //		led_setBright(2,brillo);
@@ -37,51 +43,55 @@ int main(void) {
 //			brillo++;
 //		else
 //			brillo--;
+//
 
-		acc_x = bsp_get_acc('x');
-		acc_y = bsp_get_acc('y');
+//	Uso Aceleròmetro para prender led en base a la posición de la placa
+//		acc_x = bsp_get_acc('x');
+//		acc_y = bsp_get_acc('y');
+//
+//		if (acc_x > 0) {
+//			led_setBright(1, acc_x * 100); //acc_x es un valor entre cero y uno. Como el duty cicle debe ser ingresado como % se lo multiplica por 100
+//			led_setBright(3, 0);
+//		} else {
+//			led_setBright(1, 0);
+//			led_setBright(3, acc_x * -100);
+//		}
+//		if (acc_y > 0) {
+//			led_setBright(0, acc_y * 100);
+//			led_setBright(2, 0);
+//		} else {
+//			led_setBright(0, 0);
+//			led_setBright(2, acc_y * -100);
+//		}
+//		acc_z = bsp_get_acc('z');
+//	}
 
-		if (acc_x > 0) {
-			led_setBright(1, acc_x * 100); //acc_x es un valor entre cero y uno. Como el duty cicle debe ser ingresado como % se lo multiplica por 100
-			led_setBright(3, 0);
-		} else {
-			led_setBright(1, 0);
-			led_setBright(3, acc_x * -100);
-		}
-		if (acc_y > 0) {
-			led_setBright(0, acc_y * 100);
-			led_setBright(2, 0);
-		} else {
-			led_setBright(0, 0);
-			led_setBright(2, acc_y * -100);
-		}
-		acc_z = bsp_get_acc('z');
 	}
-}
 
-/**
- * @brief Se preciono el pulsador
- *
- */
-void APP_ISR_sw(void) {
+	/**
+	 * @brief Se preciono el pulsador
+	 *
+	 */
+	void APP_ISR_sw(void) {
 
-}
-
-/**
- * @brief Interrupcion cada 1ms
- *
- */
-void APP_ISR_1ms(void) {
-	static uint16_t count_1s = 1000;
-	count_1s--;
-	if (!count_1s) {
-		led_toggle(0);
-		count_1s = 1000;
 	}
-}
 
-void ledPulso(uint8_t led, uint32_t tiempo) {
-	led_on(led);
-	Delay(tiempo);
-	led_off(led);
+	/**
+	 * @brief Interrupcion cada 1ms
+	 *
+	 */
+	void APP_ISR_1ms(void) {
+		static uint16_t count_1s = 1000;
+		count_1s--;
+		if (!count_1s) {
+			led_toggle(0);
+			count_1s = 1000;
+		}
+	}
+
+	void ledPulso(uint8_t led, uint32_t tiempo) {
+		led_on(led);
+		Delay(tiempo);
+		led_off(led);
+	}
 }

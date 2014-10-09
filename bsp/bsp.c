@@ -8,26 +8,53 @@
 #include "misc.h"				// Vectores de interrupciones (NVIC)
 #include "bsp.h"
 #include "LIS3DSH.h"
-
+#include "stm32f4xx_adc.h"//Paso 1 continuaciòn. como en este archivo usamos funciones de la librería ADC hay que incluir el .h del ADC
 #define LED_V GPIO_Pin_12
 #define LED_N GPIO_Pin_13
 #define LED_R GPIO_Pin_14
 #define LED_A GPIO_Pin_15
 
+//Paso 6: defino pines con respecto a numero de led
+#define LED_0 GPIO_Pin_0
+#define LED_1 GPIO_Pin_1
+#define LED_2 GPIO_Pin_2
+#define LED_3 GPIO_Pin_3
+#define LED_4 GPIO_Pin_6
+#define LED_5 GPIO_Pin_7
+#define LED_6 GPIO_Pin_10
+#define LED_7 GPIO_Pin_11
+
 #define BOTON GPIO_Pin_0
 
 /* Puertos de los leds disponibles */
-GPIO_TypeDef* leds_port[] = { GPIOD, GPIOD, GPIOD, GPIOD };
+GPIO_TypeDef* leds_port[] = { GPIOD, GPIOD, GPIOD, GPIOD, GPIOD, GPIOD, GPIOD,
+		GPIOD, GPIOD, GPIOD, GPIOD, GPIOD };
 /* Leds disponibles */
 const uint16_t leds[] = { LED_V, LED_R, LED_N, LED_A };
 
-uint32_t* const leds_pwm[] = { &TIM4->CCR1, &TIM4->CCR3,
-		&TIM4->CCR2, &TIM4->CCR4 };
+//Paso 7: creo arreglo para los 8 leds de la placa de expansiòn que se usarà como bumetro
+const uint16_t bumetro[] = { LED_0, LED_1, LED_2, LED_3, LED_4, LED_5, LED_6,
+		LED_7 };
+
+uint32_t* const leds_pwm[] = { &TIM4->CCR1, &TIM4->CCR3, &TIM4->CCR2,
+		&TIM4->CCR4 };
 
 extern void APP_ISR_sw(void);
 extern void APP_ISR_1ms(void);
 
 volatile uint16_t bsp_contMS = 0;
+
+void bumetroSet(uint8_t NumeroLedsOn) { //funcion de manejo bumetro
+
+	uint8_t i;
+
+	for (i = 0; i < NumeroLedsOn; i++) {
+		GPIO_SetBits(leds_port[i + 5], bumetro[i]);
+	}
+	for (i; i < 8; i++) {
+		GPIO_ResetBits(leds_port[i + 5], bumetro[i]);
+	}
+}
 
 void led_on(uint8_t led) {
 	GPIO_SetBits(leds_port[led], leds[led]);
@@ -58,53 +85,73 @@ void bsp_delayMs(uint16_t x) {
 
 }
 
+//Paso 5: creo función para recoger valor del ADC. //En este mismo paso se completa agregar el header de la funcón en el bsp.h
+float bsp_getPote() { //devuelve el valor convertido en el ADC leido del pote en porcentaje float (con coma)
+
+	uint16_t valorPorcentaje = 0;
+	// Selecciono el canal a convertir
+	ADC_RegularChannelConfig(ADC1, 12, 1, ADC_SampleTime_15Cycles);
+	ADC_SoftwareStartConv(ADC1);
+
+	// Espero a que la conversión termine
+	while (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) != SET)
+		;
+
+	// Guardo el valor leido
+	valorPorcentaje = ADC_GetConversionValue(ADC1);
+
+	return (valorPorcentaje * 100 / 4095); //como el adc es de 12 bits, tiene 4096 posibles valores (deltas v)
+
+}
+
 /**
  * @brief Interrupcion llamada cuando se preciona el pulsador
  */
-void EXTI0_IRQHandler(void) {
-
-	if (EXTI_GetITStatus(EXTI_Line0) != RESET) //Verificamos si es la del pin configurado
-			{
-		EXTI_ClearFlag(EXTI_Line0); // Limpiamos la Interrupcion
-		// Rutina:
-		APP_ISR_sw();
-	}
-}
-
+//void EXTI0_IRQHandler(void) {
+//
+//	if (EXTI_GetITStatus(EXTI_Line0) != RESET) //Verificamos si es la del pin configurado
+//			{
+//		EXTI_ClearFlag(EXTI_Line0); // Limpiamos la Interrupcion
+//		// Rutina:
+//		APP_ISR_sw();
+//	}
+//}
 /**
  * @brief Interrupcion llamada al pasar 1ms
  */
-void TIM2_IRQHandler(void) {
-
-	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-
-		APP_ISR_1ms();
-
-		if (bsp_contMS) {
-			bsp_contMS--;
-		}
-	}
-}
-
+//void TIM2_IRQHandler(void) {
+//
+//	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
+//		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+//
+//		APP_ISR_1ms();
+//
+//		if (bsp_contMS) {
+//			bsp_contMS--;
+//		}
+//	}
+//}
 void bsp_led_init();
 void bsp_sw_init();
 void bsp_timer_config();
+void bsp_ADC_config(); //PASO 2
 
+//PASO 3
 void bsp_init() {
-	//bsp_led_init();
-	bsp_pwm_config();
-	bsp_sw_init();
-	bsp_timer_config();
-	LIS3DSH_Init();
-	LIS3DSH_Set_Output(0X47);
+	// No sucede nada si dejo las siguientes funciones sin comentar si andan y no los uso.
+	bsp_led_init(); //leds de la placa discovery
+//	bsp_pwm_config();
+//	bsp_sw_init();
+	//bsp_timer_config();
+//	LIS3DSH_Init();
+//	LIS3DSH_Set_Output(0X47);
+	bsp_ADC_config();
 }
 
+float bsp_get_acc(char eje) {
 
-float bsp_get_acc(char eje){
-
-	switch(eje){//sólo se lepuede pasar una variable entera, char, etc pero no punteros ni strings 'x'=caracter
-	case 'x'://se agregan dos casos para una única acción. En este caso por si x e smayúscula o minúscula.
+	switch (eje) { //sólo se lepuede pasar una variable entera, char, etc pero no punteros ni strings 'x'=caracter
+	case 'x': //se agregan dos casos para una única acción. En este caso por si x e smayúscula o minúscula.
 	case 'X':
 		return LIS3DSH_Get_X_Out(LIS3DSH_Sense_2g);
 		break; //no haría falta agregar break ya que el return hace salir del switch. pero por costumbre luego de una acción hay que poner un break.
@@ -112,11 +159,11 @@ float bsp_get_acc(char eje){
 		return LIS3DSH_Get_Y_Out(LIS3DSH_Sense_2g);
 		break;
 	case 'Z':
-			return LIS3DSH_Get_Z_Out(LIS3DSH_Sense_2g);
-			break;
+		return LIS3DSH_Get_Z_Out(LIS3DSH_Sense_2g);
+		break;
 
 	default:
-		return -999,9; //se pasa un número que indica error ya que es un imposible este nivel de aceleración
+		return -999, 9; //se pasa un número que indica error ya que es un imposible este nivel de aceleración
 	}
 }
 
@@ -131,6 +178,10 @@ void bsp_led_init() {
 
 	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15 | GPIO_Pin_14;
 	GPIO_InitStruct.GPIO_Pin |= GPIO_Pin_13 | GPIO_Pin_12;
+	GPIO_InitStruct.GPIO_Pin |= GPIO_Pin_11 | GPIO_Pin_10; //Paso 4: agrego los demas pines que usan los leds de la placa de expansión (que segun el esquemàtico de la placa tambièn estàn en el puerto D)para que también se configuren.
+	GPIO_InitStruct.GPIO_Pin |= GPIO_Pin_7 | GPIO_Pin_6;
+	GPIO_InitStruct.GPIO_Pin |= GPIO_Pin_3 | GPIO_Pin_2;
+	GPIO_InitStruct.GPIO_Pin |= GPIO_Pin_1 | GPIO_Pin_0;
 
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
@@ -270,3 +321,33 @@ void bsp_pwm_config(void) {
 	TIM_Cmd(TIM4, ENABLE);
 
 }
+
+//PASO 1
+void bsp_ADC_config() {
+// Estructuras de configuración
+	GPIO_InitTypeDef GPIO_InitStruct;
+	ADC_CommonInitTypeDef ADC_CommonInitStruct;
+	ADC_InitTypeDef ADC1_InitStruct;
+
+// Habilito los clock a los periféricos
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+
+// Configuro el pin en modo analógico
+	GPIO_StructInit(&GPIO_InitStruct); // Reseteo la estructura
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AIN; // Modo Analógico
+	GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+// Configuro el prescaler del ADC
+	ADC_CommonStructInit(&ADC_CommonInitStruct);
+	ADC_CommonInitStruct.ADC_Prescaler = ADC_Prescaler_Div4;
+	ADC_CommonInit(&ADC_CommonInitStruct);
+
+	/* Configuro el ADC  */
+	ADC_StructInit(&ADC1_InitStruct);
+	ADC1_InitStruct.ADC_Resolution = ADC_Resolution_12b;
+	ADC_Init(ADC1, &ADC1_InitStruct);
+	ADC_Cmd(ADC1, ENABLE);
+}
+

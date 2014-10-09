@@ -41,4 +41,8 @@ void bsp_delayMs(uint16_t x);
 
 float bsp_get_acc(char eje);
 
+float bsp_getPote ();
+
+void bumetroSet(uint8_t NumeroLedsOn);
+
 #endif
