@@ -45,4 +45,6 @@ float bsp_getPote ();
 
 void bumetroSet(uint8_t NumeroLedsOn);
 
+void sendData (char data);
+
 #endif

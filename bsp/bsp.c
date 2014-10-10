@@ -9,6 +9,9 @@
 #include "bsp.h"
 #include "LIS3DSH.h"
 #include "stm32f4xx_adc.h"//Paso 1 continuaciòn. como en este archivo usamos funciones de la librería ADC hay que incluir el .h del ADC
+#include "stm32f4xx_usart.h"
+
+
 #define LED_V GPIO_Pin_12
 #define LED_N GPIO_Pin_13
 #define LED_R GPIO_Pin_14
@@ -36,6 +39,8 @@ const uint16_t leds[] = { LED_V, LED_R, LED_N, LED_A };
 const uint16_t bumetro[] = { LED_0, LED_1, LED_2, LED_3, LED_4, LED_5, LED_6,
 		LED_7 };
 
+
+
 uint32_t* const leds_pwm[] = { &TIM4->CCR1, &TIM4->CCR3, &TIM4->CCR2,
 		&TIM4->CCR4 };
 
@@ -47,12 +52,11 @@ volatile uint16_t bsp_contMS = 0;
 void bumetroSet(uint8_t NumeroLedsOn) { //funcion de manejo bumetro
 
 	uint8_t i;
-
 	for (i = 0; i < NumeroLedsOn; i++) {
-		GPIO_SetBits(leds_port[i + 5], bumetro[i]);
+		GPIO_SetBits(leds_port[i + 4], bumetro[i]);
 	}
 	for (i; i < 8; i++) {
-		GPIO_ResetBits(leds_port[i + 5], bumetro[i]);
+		GPIO_ResetBits(leds_port[i + 4], bumetro[i]);
 	}
 }
 
@@ -88,7 +92,8 @@ void bsp_delayMs(uint16_t x) {
 //Paso 5: creo función para recoger valor del ADC. //En este mismo paso se completa agregar el header de la funcón en el bsp.h
 float bsp_getPote() { //devuelve el valor convertido en el ADC leido del pote en porcentaje float (con coma)
 
-	uint16_t valorPorcentaje = 0;
+	uint32_t valorPorcentaje = 0;
+	float resultado=0;
 	// Selecciono el canal a convertir
 	ADC_RegularChannelConfig(ADC1, 12, 1, ADC_SampleTime_15Cycles);
 	ADC_SoftwareStartConv(ADC1);
@@ -99,10 +104,24 @@ float bsp_getPote() { //devuelve el valor convertido en el ADC leido del pote en
 
 	// Guardo el valor leido
 	valorPorcentaje = ADC_GetConversionValue(ADC1);
+	resultado=(float)valorPorcentaje * 100 / 4095;
 
-	return (valorPorcentaje * 100 / 4095); //como el adc es de 12 bits, tiene 4096 posibles valores (deltas v)
+	return (resultado); //como el adc es de 12 bits, tiene 4096 posibles valores (deltas v)
 
 }
+
+void sendData (char data){ //función para enviar un solo caracter usando el puerto UART
+
+
+	while(USART_GetFlagStatus(USART3, USART_FLAG_TC)); //Polling: preguntamos por el estado de una bandera hasta que salte
+
+	USART_SendData (USART3, data);
+
+	while (USART_GetFlagStatus(USART3, USART_FLAG_TC));
+
+
+}
+
 
 /**
  * @brief Interrupcion llamada cuando se preciona el pulsador
@@ -135,6 +154,7 @@ void bsp_led_init();
 void bsp_sw_init();
 void bsp_timer_config();
 void bsp_ADC_config(); //PASO 2
+void bsp_Uart_config();
 
 //PASO 3
 void bsp_init() {
@@ -146,6 +166,7 @@ void bsp_init() {
 //	LIS3DSH_Init();
 //	LIS3DSH_Set_Output(0X47);
 	bsp_ADC_config();
+	bsp_Uart_config();
 }
 
 float bsp_get_acc(char eje) {
@@ -350,4 +371,62 @@ void bsp_ADC_config() {
 	ADC_Init(ADC1, &ADC1_InitStruct);
 	ADC_Cmd(ADC1, ENABLE);
 }
+
+
+void bsp_Uart_config (){
+USART_InitTypeDef USART_InitStructure;
+ GPIO_InitTypeDef GPIO_InitStructure;
+
+    // Habilito Clocks
+ RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+
+    // Configuro Pin TX
+ GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+ GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+ GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+ GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+ GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+ GPIO_Init(GPIOD, &GPIO_InitStructure);
+
+ GPIO_PinAFConfig(GPIOD, GPIO_PinSource8, GPIO_AF_USART3);
+
+    //  Configuro Pin RX
+ GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+ GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+ GPIO_Init(GPIOD, &GPIO_InitStructure);
+
+ GPIO_PinAFConfig(GPIOD, GPIO_PinSource9, GPIO_AF_USART3);
+
+//Se llamo a un tipo de estructura creada en la libreria del micro con un nombre. Luego, se llena cada miembro de esa nueva estructura. Se inicializa y finalmente se habilita. Esto es un proceso que siempre se debe hacer para habilitar cualquier hardware. El uso del manual sólopara ver las características principales.
+
+//Configuro UART
+ USART_InitStructure.USART_BaudRate = 115200;
+ USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+ USART_InitStructure.USART_StopBits = USART_StopBits_1;
+ USART_InitStructure.USART_Parity = USART_Parity_No;
+ USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+ USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+
+     // Inicializo la USART
+ USART_Init(USART3, &USART_InitStructure);
+
+     // Habilito la Usart
+ USART_Cmd(USART3, ENABLE);
+
+     // Habilito la Interrupcion de TX que salta cuando termino la transmición.
+
+ USART_ITConfig(USART3, USART_IT_TC, ENABLE);
+}
+
+
+//		// Funciones a utilizar.
+//	void USART_SendData(USART_TypeDef* USARTx, uint16_t Data);
+//	uint16_t USART_ReceiveData(USART_TypeDef* USARTx);
+//	FlagStatus USART_GetFlagStatus(USART_TypeDef* USARTx, uint16_t USART_FLAG)
+//	FlagStatus USART_GetFlagStatus(USART_TypeDef* USARTx, uint16_t USART_FLAG)
+//
+//
+
+
 
