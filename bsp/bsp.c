@@ -11,7 +11,6 @@
 #include "stm32f4xx_adc.h"//Paso 1 continuaciòn. como en este archivo usamos funciones de la librería ADC hay que incluir el .h del ADC
 #include "stm32f4xx_usart.h"
 
-
 #define LED_V GPIO_Pin_12
 #define LED_N GPIO_Pin_13
 #define LED_R GPIO_Pin_14
@@ -38,8 +37,6 @@ const uint16_t leds[] = { LED_V, LED_R, LED_N, LED_A };
 //Paso 7: creo arreglo para los 8 leds de la placa de expansiòn que se usarà como bumetro
 const uint16_t bumetro[] = { LED_0, LED_1, LED_2, LED_3, LED_4, LED_5, LED_6,
 		LED_7 };
-
-
 
 uint32_t* const leds_pwm[] = { &TIM4->CCR1, &TIM4->CCR3, &TIM4->CCR2,
 		&TIM4->CCR4 };
@@ -93,7 +90,7 @@ void bsp_delayMs(uint16_t x) {
 float bsp_getPote() { //devuelve el valor convertido en el ADC leido del pote en porcentaje float (con coma)
 
 	uint32_t valorPorcentaje = 0;
-	float resultado=0;
+	float resultado = 0;
 	// Selecciono el canal a convertir
 	ADC_RegularChannelConfig(ADC1, 12, 1, ADC_SampleTime_15Cycles);
 	ADC_SoftwareStartConv(ADC1);
@@ -104,27 +101,26 @@ float bsp_getPote() { //devuelve el valor convertido en el ADC leido del pote en
 
 	// Guardo el valor leido
 	valorPorcentaje = ADC_GetConversionValue(ADC1);
-	resultado=(float)valorPorcentaje * 100 / 4095;
+	resultado = (float) valorPorcentaje * 100 / 4095;
 
 	return (resultado); //como el adc es de 12 bits, tiene 4096 posibles valores (deltas v)
 
 }
 
-void sendData (char data){ //función para enviar un solo caracter usando el puerto UART
+void sendData(char data) { //función para enviar un solo caracter usando el puerto UART
 
+	USART_SendData(USART3, data);
 
-	while(USART_GetFlagStatus(USART3, USART_FLAG_TC)); //Polling: preguntamos por el estado de una bandera hasta que salte
-
-	USART_SendData (USART3, data);
-
-	while (USART_GetFlagStatus(USART3, USART_FLAG_TC));
-
+	while (!USART_GetFlagStatus(USART3, USART_FLAG_TC))
+		//Polling: preguntamos por el estado de una bandera hasta que salte
+		;
+	USART_ClearFlag(USART3, USART_FLAG_TC) //bajamos bandera
+			;
 
 }
 
-
 /**
- * @brief Interrupcion llamada cuando se preciona el pulsador
+ * @brief Interrupcion llamada cuando se presiona el pulsador
  */
 //void EXTI0_IRQHandler(void) {
 //
@@ -372,53 +368,74 @@ void bsp_ADC_config() {
 	ADC_Cmd(ADC1, ENABLE);
 }
 
+void bsp_Uart_config() {
+	USART_InitTypeDef USART_InitStructure;
+	GPIO_InitTypeDef GPIO_InitStructure;
 
-void bsp_Uart_config (){
-USART_InitTypeDef USART_InitStructure;
- GPIO_InitTypeDef GPIO_InitStructure;
+	// Habilito Clocks
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 
-    // Habilito Clocks
- RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
- RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+	// Configuro Pin TX
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOD, &GPIO_InitStructure);
 
-    // Configuro Pin TX
- GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
- GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
- GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
- GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
- GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
- GPIO_Init(GPIOD, &GPIO_InitStructure);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource8, GPIO_AF_USART3);
 
- GPIO_PinAFConfig(GPIOD, GPIO_PinSource8, GPIO_AF_USART3);
+	//  Configuro Pin RX
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+	GPIO_Init(GPIOD, &GPIO_InitStructure);
 
-    //  Configuro Pin RX
- GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
- GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
- GPIO_Init(GPIOD, &GPIO_InitStructure);
-
- GPIO_PinAFConfig(GPIOD, GPIO_PinSource9, GPIO_AF_USART3);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource9, GPIO_AF_USART3);
 
 //Se llamo a un tipo de estructura creada en la libreria del micro con un nombre. Luego, se llena cada miembro de esa nueva estructura. Se inicializa y finalmente se habilita. Esto es un proceso que siempre se debe hacer para habilitar cualquier hardware. El uso del manual sólopara ver las características principales.
 
 //Configuro UART
- USART_InitStructure.USART_BaudRate = 115200;
- USART_InitStructure.USART_WordLength = USART_WordLength_8b;
- USART_InitStructure.USART_StopBits = USART_StopBits_1;
- USART_InitStructure.USART_Parity = USART_Parity_No;
- USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
- USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+	USART_InitStructure.USART_BaudRate = 115200;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
+	USART_InitStructure.USART_HardwareFlowControl =
+			USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 
-     // Inicializo la USART
- USART_Init(USART3, &USART_InitStructure);
+	// Inicializo la USART
+	USART_Init(USART3, &USART_InitStructure);
 
-     // Habilito la Usart
- USART_Cmd(USART3, ENABLE);
+	// Habilito la Usart
+	USART_Cmd(USART3, ENABLE);
 
-     // Habilito la Interrupcion de TX que salta cuando termino la transmición.
-
- USART_ITConfig(USART3, USART_IT_TC, ENABLE);
+//	// Habilito la Interrupcion por RX
+//
+//	USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
+//	// Habilito la Interrupcion de TX que salta cuando termino la transmición.
+//
+//	USART_ITConfig(USART3, USART_IT_TC, ENABLE);
 }
 
+/*
+Polling Mode
+=============
+In Polling Mode, the SPI communication can be managed by 10 flags:
+1. USART_FLAG_TXE : to indicate the status of the transmit buffer register
+2. USART_FLAG_RXNE : to indicate the status of the receive buffer register
+3. USART_FLAG_TC : to indicate the status of the transmit operation
+4. USART_FLAG_IDLE : to indicate the status of the Idle Line
+5. USART_FLAG_CTS : to indicate the status of the nCTS input
+6. USART_FLAG_LBD : to indicate the status of the LIN break detection
+7. USART_FLAG_NE : to indicate if a noise error occur
+8. USART_FLAG_FE : to indicate if a frame error occur
+9. USART_FLAG_PE : to indicate if a parity error occur
+10. USART_FLAG_ORE : to indicate if an Overrun error occur
+
+In this Mode it is advised to use the following functions:
+- FlagStatus USART_GetFlagStatus(USART_TypeDef* USARTx, uint16_t USART_FLAG);
+- void USART_ClearFlag(USART_TypeDef* USARTx, uint16_t USART_FLAG);
 
 //		// Funciones a utilizar.
 //	void USART_SendData(USART_TypeDef* USARTx, uint16_t Data);
@@ -427,6 +444,7 @@ USART_InitTypeDef USART_InitStructure;
 //	FlagStatus USART_GetFlagStatus(USART_TypeDef* USARTx, uint16_t USART_FLAG)
 //
 //
-
-
+ *
+ *
+ */
 

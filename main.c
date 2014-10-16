@@ -23,7 +23,7 @@ int main(void) {
 //	float acc_z;
 	uint8_t CantLedsOn = 0; //Paso 7 empiezo con aplicaciòn.
 	float PorcentajePote = 0;
-	float memoriaPorcentajeTemporal = 0;
+	uint8_t memoriaCantLedsTemporal = 0;
 	char txbuffer[20];
 
 	while (1) {
@@ -33,13 +33,13 @@ int main(void) {
 		CantLedsOn = (uint8_t)(0.08 * PorcentajePote); //Se guarda un entero que indica la cant de leds a encenderse en base a una ecuaciòn de la recta. Ver apuntes luego de ADC
 		bumetroSet(CantLedsOn);
 
-		if (memoriaPorcentajeTemporal != PorcentajePote) {
+		if (memoriaCantLedsTemporal != CantLedsOn) {
 
 			uint8_t i;
 
-			sprintf(txbuffer, "Valor Pote = %f", PorcentajePote); //función de librería de manejo de string que carga en txbuffer, que es un arreglo de chars, los carácteres entre doble comillas como chars individuales. el %f indica que además se va a pasar una variable float. (tabién se puede decir %d si es decimal y asi)
+			sprintf(txbuffer, "Valor Pote = %f\n", PorcentajePote); //función de librería de manejo de string que carga en txbuffer, que es un arreglo de chars, los carácteres entre doble comillas como chars individuales. el %f indica que además se va a pasar una variable float. (tabién se puede decir %d si es decimal y asi)
 
-			memoriaPorcentajeTemporal = PorcentajePote;
+			memoriaCantLedsTemporal = CantLedsOn;
 
 			for (i = 0; txbuffer[i] != 0; i++) //mandamos cada caracter a la función de envio de datos que usa la uart
 					{
